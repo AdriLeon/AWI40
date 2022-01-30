@@ -1,0 +1,2 @@
+Pyrebase4==4.5.0
+web.py==0.62
