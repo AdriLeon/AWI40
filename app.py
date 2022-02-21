@@ -7,7 +7,8 @@ urls = (
     '/login', 'Login',
     '/signup', 'Signup',
     '/inicio', 'Inicio',
-    '/logout', 'Logout'
+    '/logout', 'Logout',
+    '/recuperar', 'Recuperar'
 )
 app = web.application(urls, globals())
 render = web.template.render('views')
@@ -18,9 +19,9 @@ class Login:
             message = None # se crear una variable para el mensaje de error
             return render.login(message) # renderiza la pagina login.html con el mensaje
         except Exception as error: 
-            message = "Error en el sistema" # se alamacena el mensaje de error
+            message = "Error en el sistema" # se almamacena nuestro mensaje de error
             print("Error Login.GET: {}".format(error)) # se imprime el error que ocurrio
-            return render.login(message) # se renderiza nuevamente login con el mensaje de error
+            return render.login(message) # se renderiza nuevamente alogin con el mensaje de error
 
     def POST(self):
         try:
@@ -52,11 +53,20 @@ class Signup:
         try:
             firebase = pyrebase.initialize_app(token.firebaseConfig)
             auth = firebase.auth()
+            db = firebase.database()
             formulario = web.input()
+            name = formulario.name
+            phone = formulario.phone
             email = formulario.email
             password = formulario.password
-            user= auth.create_user_with_email_and_password(email, password)# no permitira crear nuevo usuario y contraseña
+            user= auth.create_user_with_email_and_password(email, password)# nos permitira crear nuevo usuario y contraseña
             print(user['localId']) 
+            data = {# se crea una variable, en ella introducirmos los valores del formulario en formato json (un diccionario)
+                "name": name,
+                "phone": phone,
+                "email": email
+            }
+            results = db.child("users").child(user['localId']).set(data)#aqui almacenaremos los datos en la pase de datos, user para el nombre de la tabla, de ahi generamos otra rama que sera la de la localId
             web.setcookie('localId', user['localId'], 3600)
             print("localId: ", web.cookies().get('localId'))
             return web.seeother("login") # redirecciona a la pagina de login
@@ -88,6 +98,17 @@ class Logout:
         web.setcookie('localId', '', 3600)#eliminara los datos de la ID
         return web.seeother('login')#nos renderiza a la pagina de login
 
+class Recuperar:
+    def GET(self):
+        return render.recuperar()
+    def POST(self):
+        firebase = pyrebase.initialize_app(token.firebaseConfig)
+        auth = firebase.auth() # Este nos permitira autenticar con firebase
+        formulario = web.input() #tomara los datos del formulario
+        email = formulario.email #el email del formulario se almacena en la variable
+        result = auth.send_password_reset_email(email)
+        print(result)
+        return web.seeother("login")
 
 
 if __name__ == "__main__":
